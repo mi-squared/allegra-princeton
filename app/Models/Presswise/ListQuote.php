@@ -21,4 +21,9 @@ class ListQuote extends Model
     {
         return $query->where('status', self::STATUS_NEW)->where(self::CREATED_AT, '>', $ts);
     }
+
+    public function toZoho()
+    {
+        throw new \RuntimeException("TODO");
+    }
 }
