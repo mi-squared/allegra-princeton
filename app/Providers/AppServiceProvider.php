@@ -6,7 +6,7 @@ use Illuminate\Support\ServiceProvider;
 
 use com\zoho\api\authenticator\OAuthToken;
 use com\zoho\api\authenticator\TokenType;
-use com\zoho\api\authenticator\store\DBStore;
+// use com\zoho\api\authenticator\store\DBStore;
 use com\zoho\api\authenticator\store\FileStore;
 use com\zoho\crm\api\Initializer;
 use com\zoho\crm\api\UserSignature;
@@ -43,7 +43,7 @@ class AppServiceProvider extends ServiceProvider
             * 2 -> Absolute file path, where messages need to be logged.
         */
         // TODO propper logging
-        $logger = Logger::getInstance(\com\zoho\api\logger\Levels::INFO, storage_path("logs/zoho.log"));
+        $logger = Logger::getInstance(Levels::INFO, storage_path("logs/zoho.log"));
 
         // Create an UserSignature instance that takes user Email as parameter
         // TODO config based
@@ -65,7 +65,7 @@ class AppServiceProvider extends ServiceProvider
             * 4 -> Token type(REFRESH/GRANT).
             * 5 -> OAuth redirect URL.
         */
-        $token = new OAuthToken(env("ZOHO_CLIENT_ID"), env("ZOHO_CLIENT_SECRET"), "REFRESH/GRANT token", TokenType::GRANT, null);
+        $token = new OAuthToken(env("ZOHO_CLIENT_ID"), env("ZOHO_CLIENT_SECRET"), env("ZOHO_REFRESH_TOKEN"), TokenType::REFRESH, null);
 
 
         //Parameter containing the absolute file path to store tokens
