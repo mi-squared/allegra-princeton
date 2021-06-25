@@ -5,12 +5,34 @@ namespace App\Services;
 use com\zoho\crm\api\record\RecordOperations;
 use com\zoho\crm\api\HeaderMap;
 use com\zoho\crm\api\ParameterMap;
+use com\zoho\crm\api\record\BodyWrapper;
 use com\zoho\crm\api\record\GetRecordsHeader;
 use com\zoho\crm\api\record\GetRecordsParam;
 use com\zoho\crm\api\record\ResponseWrapper;
+use com\zoho\crm\api\record\Quotes;
 
 class ZohoService
 {
+    public static function saveQuote(\com\zoho\crm\api\record\Record $record)
+    {
+        // modified from https://github.com/mi-squared/zohocrm-php-sdk/blob/master/samples/src/com/zoho/crm/api/record/Record.php#L1828
+        //Get instance of RecordOperations Class that takes moduleAPIName as parameter
+        $recordOperations = new RecordOperations();
+
+        //Get instance of BodyWrapper Class that will contain the request body
+        $bodyWrapper = new BodyWrapper();
+
+        //List of Record instances
+        $records = [$record];
+
+        //Set the list to Records in BodyWrapper instance
+        $bodyWrapper->setData($records);
+
+        //Call createRecords method that takes BodyWrapper instance as parameter.
+        return $recordOperations->createRecords("Quotes", $bodyWrapper);
+    }
+
+
     public static function getQuotes()
     {
         $recordOperations = new RecordOperations();
