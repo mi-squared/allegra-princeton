@@ -15,4 +15,9 @@ class QuoteItems extends Model
 
     const CREATED_AT = 'created';
     const UPDATED_AT = 'modified';
+
+    public function quoteQuantity()
+    {
+        return $this->hasOne(QuoteQuantities::class, "quoteQuantItemRow")->ofMany("quoteQuantID", "min");
+    }
 }
