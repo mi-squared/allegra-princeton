@@ -20,6 +20,9 @@ class ListQuote extends Model
 
     const STATUS_NEW = 'new';
 
+    // Set David as the default CSR if one can't be found
+    const DEFAULT_CSR = ['id' => '1438057000000083001'];
+
     public function scopeCreatedSince($query, $ts)
     {
         return $query->where('status', self::STATUS_NEW)->where(self::CREATED_AT, '>', $ts);
@@ -75,19 +78,19 @@ class ListQuote extends Model
             $grand_total += $quote_item->quoteQuantity->grandTotal;
 
             $items[] = [
-                'product' =>
-                array(
+                'product' => [
                     'Product_Code' => $quote_item->productID,
                     // 'Currency' => 'USD',
-                    // 'name' => 'Test2',
-                    // 'id' => '1438057000029929060',
-                ),
-                'quantity' => $quote_item->quoteQuantity->quantity,
+                    'name' => $quote_item->productDescription,
+                    'id' => '1438057000052518001', // "custom" product id
+                ],
+                'quantity' => (float)$quote_item->quoteQuantity->quantity,
                 'Discount' => 0,
                 // 'total_after_discount' => $quote_item->quoteQuantity->grandTotal,
                 // 'net_total' => $quote_item->quoteQuantity->grandTotal,
                 // 'book' => NULL,
                 'Tax' => 0,
+                // Presswise doesn't give list/unit values so we have to calculate
                 'list_price' => $quote_item->quoteQuantity->grandTotal / $quote_item->quoteQuantity->quantity,
                 'unit_price' => $quote_item->quoteQuantity->grandTotal / $quote_item->quoteQuantity->quantity,
                 // 'quantity_in_stock' => -10,
@@ -155,7 +158,7 @@ class ListQuote extends Model
         // $record->addFieldValue(new Field('Shipping_Code'), NULL);
         // $record->addFieldValue(new Field('Billing_City'), NULL);
         // $record->addFieldValue(new Field('Quote_Number'), '1438057000029929078');
-        $record->addFieldValue(new Field('PressWise_Ref_OrderID'), $this->orderID);
+        $record->addFieldValue(new Field('PressWise_Ref_OrderID'), "https://myag1.mypresswise.com/s/cost.php?quoteID={$this->quoteID}.1");
         // $record->addFieldValue(new Field('Created_By'), \com\zoho\crm\api\users\User::__set_state(array(
         //     'keyValues' =>
         //     array(
@@ -166,7 +169,8 @@ class ListQuote extends Model
         //     'keyModified' =>
         //     array(),
         // )));
-        $record->addFieldValue(new Field('Customer_Service_Rep'), NULL);
+
+        $record->addFieldValue(new Field('Customer_Service_Rep'), self::DEFAULT_CSR);
         // $record->addFieldValue(new Field('Shipping_Street'), NULL);
         // $record->addFieldValue(new Field('Description'), NULL);
         // $record->addFieldValue(new Field('Discount'), 0);
@@ -205,7 +209,7 @@ class ListQuote extends Model
         // $record->addFieldValue(new Field('Terms_and_Conditions'), NULL);
         $record->addFieldValue(new Field('Grand_Total'), $grand_total);
         $record->addFieldValue(new Field('Sub_Total'), $grand_total);
-        $record->addFieldValue(new Field('Subject'), $this->quoteName);
+        $record->addFieldValue(new Field('Subject'), "[TEST] " . $this->quoteName);
         // $record->addFieldValue(new Field('$orchestration'), false);
         $record->addFieldValue(new Field('Contact_Name'), NULL);
         $record->addFieldValue(new Field('Production_Notes'), $this->productionNote);
