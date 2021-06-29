@@ -9,7 +9,7 @@ class QuoteItems extends Model
 {
     use HasFactory;
 
-    protected $connection = 'presswise';
+    protected $connection = 'presswise_price';
     protected $table = 'quote_items';
     protected $primaryKey = 'itemRow';
 

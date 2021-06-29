@@ -12,7 +12,7 @@ class ListQuote extends Model
 {
     use HasFactory;
 
-    protected $connection = 'presswise';
+    protected $connection = 'presswise_price';
     protected $table = 'list_quote';
 
     const CREATED_AT = 'created';
@@ -31,6 +31,11 @@ class ListQuote extends Model
     public function quoteItems()
     {
         return $this->hasMany(QuoteItems::class, "quoteItemQuoteID", "quoteID")->orderBy("itemRow");
+    }
+
+    public function listCustomer()
+    {
+        return $this->hasOne(ListCustomer::class, "customerID", "customerID");
     }
 
     public function toZoho()
