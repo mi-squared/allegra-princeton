@@ -4,16 +4,29 @@ namespace App\Services;
 
 use com\zoho\crm\api\record\RecordOperations;
 use com\zoho\crm\api\HeaderMap;
+use com\zoho\crm\api\Param;
 use com\zoho\crm\api\ParameterMap;
 use com\zoho\crm\api\record\BodyWrapper;
 use com\zoho\crm\api\record\GetRecordsHeader;
 use com\zoho\crm\api\record\GetRecordsParam;
 use com\zoho\crm\api\record\ResponseWrapper;
+use com\zoho\crm\api\record\SearchRecordsParam;
 use com\zoho\crm\api\record\Quotes;
+use com\zoho\crm\api\users\UsersOperations;
+use com\zoho\crm\api\users\GetUsersHeader;
+use com\zoho\crm\api\users\GetUserHeader;
+use com\zoho\crm\api\users\GetUsersParam;
+
+use Illuminate\Support\Facades\Cache;
 
 class ZohoService
 {
     public static function saveQuote(\com\zoho\crm\api\record\Record $record)
+    {
+        return self::saveRecord("Quotes", $record);
+    }
+
+    public static function saveRecord($module, \com\zoho\crm\api\record\Record $record)
     {
         // modified from https://github.com/mi-squared/zohocrm-php-sdk/blob/master/samples/src/com/zoho/crm/api/record/Record.php#L1828
         //Get instance of RecordOperations Class that takes moduleAPIName as parameter
@@ -29,11 +42,10 @@ class ZohoService
         $bodyWrapper->setData($records);
 
         //Call createRecords method that takes BodyWrapper instance as parameter.
-        return $recordOperations->createRecords("Quotes", $bodyWrapper);
+        return $recordOperations->createRecords($module, $bodyWrapper);
     }
 
-
-    public static function getQuotes()
+    public static function findRecords($moduleAPIName, ParameterMap $paramInstance, HeaderMap $headerInstance)
     {
         $recordOperations = new RecordOperations();
 
@@ -47,12 +59,510 @@ class ZohoService
 
         $headerInstance->add(GetRecordsHeader::IfModifiedSince(), $ifmodifiedsince);
 
-        $moduleAPIName = "Quotes";
+        //Call getRecord method that takes paramInstance, moduleAPIName as parameter
+        return $recordOperations->getRecords($moduleAPIName, $paramInstance, $headerInstance);
+    }
+
+    public static function findAccountByPWCustomerID($customerId)
+    {
+        $moduleAPIName = "Accounts";
+
+        //Get instance of RecordOperations Class that takes moduleAPIName as parameter
+        $recordOperations = new RecordOperations();
+        $paramInstance = new ParameterMap();
+        $paramInstance->add(SearchRecordsParam::criteria(), "((PW_CustomerID:equals:{$customerId}))");
+
+        // $paramInstance->add(SearchRecordsParam::email(), "raja@gmail.com");
+
+        // $paramInstance->add(SearchRecordsParam::phone(), "234567890");
+
+        // $paramInstance->add(SearchRecordsParam::word(), "First Name Last Name");
+
+        // $paramInstance->add(SearchRecordsParam::converted(), "both");
+
+        // $paramInstance->add(SearchRecordsParam::approved(), "both");
+
+        // $paramInstance->add(SearchRecordsParam::page(), 1);
+
+        // $paramInstance->add(SearchRecordsParam::perPage(), 2);
+
+        //Call getRecords method
+        $response = $recordOperations->searchRecords($moduleAPIName, $paramInstance);
+
+        if ($response != null) {
+            //Get the status code from response
+            echo ("Status code " . $response->getStatusCode() . "\n");
+
+            if (in_array($response->getStatusCode(), array(204, 304))) {
+                echo ($response->getStatusCode() == 204 ? "No Content\n" : "Not Modified\n");
+
+                return;
+            }
+
+            if ($response->isExpected()) {
+                //Get the object from response
+                $responseHandler = $response->getObject();
+
+                if ($responseHandler instanceof ResponseWrapper) {
+                    $responseWrapper = $responseHandler;
+
+                    //Get the obtained Record instance
+                    $records = $responseWrapper->getData();
+
+                    $recordClass = 'com\zoho\crm\api\record\Record';
+
+                    foreach ($records as $record) {
+                        //Get the ID of each Record
+                        echo ("Record ID: " . $record->getId() . "\n");
+
+                        //Get the createdBy User instance of each Record
+                        $createdBy = $record->getCreatedBy();
+
+                        //Check if createdBy is not null
+                        if ($createdBy != null) {
+                            //Get the ID of the createdBy User
+                            echo ("Record Created By User-ID: " . $createdBy->getId() . "\n");
+
+                            //Get the name of the createdBy User
+                            echo ("Record Created By User-Name: " . $createdBy->getName() . "\n");
+
+                            //Get the Email of the createdBy User
+                            echo ("Record Created By User-Email: " . $createdBy->getEmail() . "\n");
+                        }
+
+                        //Get the CreatedTime of each Record
+                        echo ("Record CreatedTime: ");
+
+                        print_r($record->getCreatedTime());
+
+                        echo ("\n");
+
+                        //Get the modifiedBy User instance of each Record
+                        $modifiedBy = $record->getModifiedBy();
+
+                        //Check if modifiedBy is not null
+                        if ($modifiedBy != null) {
+                            //Get the ID of the modifiedBy User
+                            echo ("Record Modified By User-ID: " . $modifiedBy->getId() . "\n");
+
+                            //Get the name of the modifiedBy User
+                            echo ("Record Modified By User-Name: " . $modifiedBy->getName() . "\n");
+
+                            //Get the Email of the modifiedBy User
+                            echo ("Record Modified By User-Email: " . $modifiedBy->getEmail() . "\n");
+                        }
+
+                        //Get the ModifiedTime of each Record
+                        echo ("Record ModifiedTime: ");
+
+                        print_r($record->getModifiedTime());
+
+                        echo ("\n");
+
+                        //Get the list of Tag instance each Record
+                        $tags = $record->getTag();
+
+                        //Check if tags is not null
+                        if ($tags != null) {
+                            foreach ($tags as $tag) {
+                                //Get the Name of each Tag
+                                echo ("Record Tag Name: " . $tag->getName() . "\n");
+
+                                //Get the Id of each Tag
+                                echo ("Record Tag ID: " . $tag->getId() . "\n");
+                            }
+                        }
+
+                        //To get particular field value 
+                        echo ("Record Field Value: " . $record->getKeyValue("Last_Name") . "\n"); // FieldApiName
+
+                        echo ("Record KeyValues : \n");
+
+                        //Get the KeyValue map
+                        foreach ($record->getKeyValues() as $keyName => $value) {
+                            if ($value != null) {
+                                if ((is_array($value) && sizeof($value) > 0) && isset($value[0])) {
+                                    if ($value[0] instanceof FileDetails) {
+                                        $fileDetails = $value;
+
+                                        foreach ($fileDetails as $fileDetail) {
+                                            //Get the Extn of each FileDetails
+                                            echo ("Record FileDetails Extn: " . $fileDetail->getExtn() . "\n");
+
+                                            //Get the IsPreviewAvailable of each FileDetails
+                                            echo ("Record FileDetails IsPreviewAvailable: " . $fileDetail->getIsPreviewAvailable() . "\n");
+
+                                            //Get the DownloadUrl of each FileDetails
+                                            echo ("Record FileDetails DownloadUrl: " . $fileDetail->getDownloadUrl() . "\n");
+
+                                            //Get the DeleteUrl of each FileDetails
+                                            echo ("Record FileDetails DeleteUrl: " . $fileDetail->getDeleteUrl() . "\n");
+
+                                            //Get the EntityId of each FileDetails
+                                            echo ("Record FileDetails EntityId: " . $fileDetail->getEntityId() . "\n");
+
+                                            //Get the Mode of each FileDetails
+                                            echo ("Record FileDetails Mode: " . $fileDetail->getMode() . "\n");
+
+                                            //Get the OriginalSizeByte of each FileDetails
+                                            echo ("Record FileDetails OriginalSizeByte: " . $fileDetail->getOriginalSizeByte() . "\n");
+
+                                            //Get the PreviewUrl of each FileDetails
+                                            echo ("Record FileDetails PreviewUrl: " . $fileDetail->getPreviewUrl() . "\n");
+
+                                            //Get the FileName of each FileDetails
+                                            echo ("Record FileDetails FileName: " . $fileDetail->getFileName() . "\n");
+
+                                            //Get the FileId of each FileDetails
+                                            echo ("Record FileDetails FileId: " . $fileDetail->getFileId() . "\n");
+
+                                            //Get the AttachmentId of each FileDetails
+                                            echo ("Record FileDetails AttachmentId: " . $fileDetail->getAttachmentId() . "\n");
+
+                                            //Get the FileSize of each FileDetails
+                                            echo ("Record FileDetails FileSize: " . $fileDetail->getFileSize() . "\n");
+
+                                            //Get the CreatorId of each FileDetails
+                                            echo ("Record FileDetails CreatorId: " . $fileDetail->getCreatorId() . "\n");
+
+                                            //Get the LinkDocs of each FileDetails
+                                            echo ("Record FileDetails LinkDocs: " . $fileDetail->getLinkDocs() . "\n");
+                                        }
+                                    } else if ($value[0] instanceof Choice) {
+                                        $choice = $value;
+
+                                        foreach ($choice as $choiceValue) {
+                                            echo ("Record " . $keyName . " : " . $choiceValue->getValue() . "\n");
+                                        }
+                                    } else if ($value[0] instanceof InventoryLineItems) {
+                                        $productDetails = $value;
+
+                                        foreach ($productDetails as $productDetail) {
+                                            $lineItemProduct = $productDetail->getProduct();
+
+                                            if ($lineItemProduct != null) {
+                                                echo ("Record ProductDetails LineItemProduct ProductCode: " . $lineItemProduct->getProductCode() . "\n");
+
+                                                echo ("Record ProductDetails LineItemProduct Currency: " . $lineItemProduct->getCurrency() . "\n");
+
+                                                echo ("Record ProductDetails LineItemProduct Name: " . $lineItemProduct->getName() . "\n");
+
+                                                echo ("Record ProductDetails LineItemProduct Id: " . $lineItemProduct->getId() . "\n");
+                                            }
+
+                                            echo ("Record ProductDetails Quantity: " . $productDetail->getQuantity() . "\n");
+
+                                            echo ("Record ProductDetails Discount: " . $productDetail->getDiscount() . "\n");
+
+                                            echo ("Record ProductDetails TotalAfterDiscount: " . $productDetail->getTotalAfterDiscount() . "\n");
+
+                                            echo ("Record ProductDetails NetTotal: " . $productDetail->getNetTotal() . "\n");
+
+                                            if ($productDetail->getBook() != null) {
+                                                echo ("Record ProductDetails Book: " . $productDetail->getBook() . "\n");
+                                            }
+
+                                            echo ("Record ProductDetails Tax: " . $productDetail->getTax() . "\n");
+
+                                            echo ("Record ProductDetails ListPrice: " . $productDetail->getListPrice() . "\n");
+
+                                            echo ("Record ProductDetails UnitPrice: " . $productDetail->getUnitPrice() . "\n");
+
+                                            echo ("Record ProductDetails QuantityInStock: " . $productDetail->getQuantityInStock() . "\n");
+
+                                            echo ("Record ProductDetails Total: " . $productDetail->getTotal() . "\n");
+
+                                            echo ("Record ProductDetails ID: " . $productDetail->getId() . "\n");
+
+                                            echo ("Record ProductDetails ProductDescription: " . $productDetail->getProductDescription() . "\n");
+
+                                            $lineTaxes = $productDetail->getLineTax();
+
+                                            foreach ($lineTaxes as $lineTax) {
+                                                echo ("Record ProductDetails LineTax Percentage: " . $lineTax->getPercentage() . "\n");
+
+                                                echo ("Record ProductDetails LineTax Name: " . $lineTax->getName() . "\n");
+
+                                                echo ("Record ProductDetails LineTax Id: " . $lineTax->getId() . "\n");
+
+                                                echo ("Record ProductDetails LineTax Value: " . $lineTax->getValue() . "\n");
+                                            }
+                                        }
+                                    } else if ($value[0] instanceof Tag) {
+                                        $tagList = $value;
+
+                                        foreach ($tagList as $tag) {
+                                            //Get the Name of each Tag
+                                            echo ("Record Tag Name: " . $tag->getName() . "\n");
+
+                                            //Get the Id of each Tag
+                                            echo ("Record Tag ID: " . $tag->getId() . "\n");
+                                        }
+                                    } else if ($value[0] instanceof PricingDetails) {
+                                        $pricingDetails = $value;
+
+                                        foreach ($pricingDetails as $pricingDetail) {
+                                            echo ("Record PricingDetails ToRange: " . $pricingDetail->getToRange() . "\n");
+
+                                            echo ("Record PricingDetails Discount: " . $pricingDetail->getDiscount() . "\n");
+
+                                            echo ("Record PricingDetails ID: " . $pricingDetail->getId() . "\n");
+
+                                            echo ("Record PricingDetails FromRange: " . $pricingDetail->getFromRange() . "\n");
+                                        }
+                                    } else if ($value[0] instanceof Participants) {
+                                        $participants = $value;
+
+                                        foreach ($participants as $participant) {
+                                            echo ("RelatedRecord Participants Name: " . $participant->getName() . "\n");
+
+                                            echo ("RelatedRecord Participants Invited: " . $participant->getInvited() . "\n");
+
+                                            echo ("RelatedRecord Participants ID: " . $participant->getId() . "\n");
+
+                                            echo ("RelatedRecord Participants Type: " . $participant->getType() . "\n");
+
+                                            echo ("RelatedRecord Participants Participant: " . $participant->getParticipant() . "\n");
+
+                                            echo ("RelatedRecord Participants Status: " . $participant->getStatus() . "\n");
+                                        }
+                                    } else if ($value instanceof User) {
+                                        $user = $value;
+
+                                        if ($user != null) {
+                                            echo ("Record " . $keyName . " User-ID: " . $user->getId() . "\n");
+
+                                            echo ("Record " . $keyName . " User-Name: " . $user->getName() . "\n");
+
+                                            echo ("Record " . $keyName . " User-Email: " . $user->getEmail() . "\n");
+                                        }
+                                    } else if ($value[0] instanceof $recordClass) {
+                                        $recordList = $value;
+
+                                        foreach ($recordList as $record1) {
+                                            //Get the details map
+                                            foreach ($record1->getKeyValues() as $key => $value1) {
+                                                //Get each value in the map
+                                                echo ($key . " : ");
+
+                                                print_r($value1);
+
+                                                echo ("\n");
+                                            }
+                                        }
+                                    } else if ($value[0] instanceof LineTax) {
+                                        $lineTaxes = $value;
+
+                                        foreach ($lineTaxes as $lineTax) {
+                                            echo ("Record ProductDetails LineTax Percentage: " . $lineTax->getPercentage() . "\n");
+
+                                            echo ("Record ProductDetails LineTax Name: " . $lineTax->getName() . "\n");
+
+                                            echo ("Record ProductDetails LineTax Id: " . $lineTax->getId() . "\n");
+
+                                            echo ("Record ProductDetails LineTax Value: " . $lineTax->getValue() . "\n");
+                                        }
+                                    } else if ($value[0] instanceof Comment) {
+                                        $comments = $value;
+
+                                        foreach ($comments as $comment) {
+                                            echo ("Record Comment CommentedBy: " . $comment->getCommentedBy() . "\n");
+
+                                            echo ("Record Comment CommentedTime: ");
+
+                                            print_r($comment->getCommentedTime());
+
+                                            echo ("\n");
+
+                                            echo ("Record Comment CommentContent: " . $comment->getCommentContent() . "\n");
+
+                                            echo ("Record Comment Id: " . $comment->getId() . "\n");
+                                        }
+                                    } else {
+                                        echo ($keyName . " : ");
+
+                                        print_r($value);
+
+                                        echo ("\n");
+                                    }
+                                } else if ($value instanceof Layout) {
+                                    $layout = $value;
+
+                                    if ($layout != null) {
+                                        echo ("Record " . $keyName . " ID: " . $layout->getId() . "\n");
+
+                                        echo ("Record " . $keyName . " Name: " . $layout->getName() . "\n");
+                                    }
+                                } else if ($value instanceof User) {
+                                    $user = $value;
+
+                                    if ($user != null) {
+                                        echo ("Record " . $keyName . " User-ID: " . $user->getId() . "\n");
+
+                                        echo ("Record " . $keyName . " User-Name: " . $user->getName() . "\n");
+
+                                        echo ("Record " . $keyName . " User-Email: " . $user->getEmail() . "\n");
+                                    }
+                                } else if ($value instanceof $recordClass) {
+                                    $recordValue = $value;
+
+                                    echo ("Record " . $keyName . " ID: " . $recordValue->getId() . "\n");
+
+                                    echo ("Record " . $keyName . " Name: " . $recordValue->getKeyValue("name") . "\n");
+                                } else if ($value instanceof Choice) {
+                                    $choiceValue = $value;
+
+                                    echo ("Record " . $keyName . " : " . $choiceValue->getValue() . "\n");
+                                } else if ($value instanceof RemindAt) {
+                                    echo ($keyName . ": " . $value->getAlarm() . "\n");
+                                } else if ($value instanceof RecurringActivity) {
+                                    echo ($keyName . " : RRULE" . ": " . $value->getRrule() . "\n");
+                                } else {
+                                    //Get each value in the map
+                                    echo ($keyName . " : ");
+
+                                    print_r($value);
+
+                                    echo ("\n");
+                                }
+                            }
+                        }
+                    }
+
+                    //Get the Object obtained Info instance
+                    $info = $responseWrapper->getInfo();
+
+                    //Check if info is not null
+                    if ($info != null) {
+                        if ($info->getPerPage() != null) {
+                            //Get the PerPage of the Info
+                            echo ("Record Info PerPage: " . $info->getPerPage() . "\n");
+                        }
+
+                        if ($info->getCount() != null) {
+                            //Get the Count of the Info
+                            echo ("Record Info Count: " . $info->getCount() . "\n");
+                        }
+
+                        if ($info->getPage() != null) {
+                            //Get the Page of the Info
+                            echo ("Record Info Page: " . $info->getPage() . "\n");
+                        }
+
+                        if ($info->getMoreRecords() != null) {
+                            //Get the MoreRecords of the Info
+                            echo ("Record Info MoreRecords: " . $info->getMoreRecords() . "\n");
+                        }
+                    }
+                }
+                //Check if the request returned an exception
+                else if ($responseHandler instanceof APIException) {
+                    //Get the received APIException instance
+                    $exception = $responseHandler;
+
+                    //Get the Status
+                    echo ("Status: " . $exception->getStatus()->getValue() . "\n");
+
+                    //Get the Code
+                    echo ("Code: " . $exception->getCode()->getValue() . "\n");
+
+                    if ($exception->getDetails() != null) {
+                        echo ("Details: ");
+
+                        //Get the details map
+                        foreach ($exception->getDetails() as $key => $value) {
+                            //Get each value in the map
+                            echo ($key . " : " . $value . "\n");
+                        }
+
+                        //Get the Message
+                        echo ("Message: " . $exception->getMessage()->getValue() . "\n");
+                    }
+                }
+            } else {
+                print_r($response);
+            }
+        }
+    }
+
+    /**
+     * <h3> Get Users </h3>
+     * This method is used to retrieve the users data specified in the API request.
+     * You can specify the type of users that needs to be retrieved using the Users API.
+     * @throws Exception
+     */
+    public static function getUsers()
+    {
+        if (Cache::has("zoho.ActiveUsers")) {
+            return Cache::get("zoho.ActiveUsers");
+        }
+        //Get instance of UsersOperations Class
+        $usersOperations = new UsersOperations();
+
+        //Get instance of ParameterMap Class
+        $paramInstance = new ParameterMap();
+        $paramInstance->add(GetUsersParam::type(), "ActiveUsers");
+        $paramInstance->add(GetUsersParam::page(), 1);
+        $paramInstance->add(GetUsersParam::perPage(), 200);
+
+        $headerInstance = new HeaderMap();
+        // $ifmodifiedsince = date_create("2010-07-15T17:58:47+05:30")->setTimezone(new \DateTimeZone(date_default_timezone_get()));
+        // $headerInstance->add(GetUsersHeader::IfModifiedSince(), $ifmodifiedsince);
+
+        //Call getUsers method that takes paramInstance as parameter
+        $response = $usersOperations->getUsers($paramInstance, $headerInstance);
+
+        if ($response != null) {
+            if ($response->getStatusCode() != 200) {
+                throw new \RuntimeException("Zoho ActiveUsers search failed with HTTP {$response}");
+            }
+
+            $responseHandler = $response->getObject();
+
+            if ($responseHandler instanceof \com\zoho\crm\api\users\ResponseWrapper) {
+                $responseWrapper = $responseHandler;
+
+                //Get the list of obtained User instances
+                $users = $responseWrapper->getUsers();
+                Cache::put("zoho.ActiveUsers", $users, now()->addMinutes(3600));
+                return $users;
+            }
+        }
+    }
+
+    public static function findUserByEmail($email)
+    {
+        foreach (self::getUsers() as $user) {
+            if (strtolower($user->getEmail()) == $email) {
+                return $user;
+            }
+        }
+
+        return false;
+    }
+
+
+    public static function getAccounts()
+    {
+        $recordOperations = new RecordOperations();
+
+        $paramInstance = new ParameterMap();
+
+        // $paramInstance->add(GetRecordsParam::approved(), "both");
+        // $paramInstance->add(new Param("PW_CustomerID"))
+
+        $headerInstance = new HeaderMap();
+
+        // $ifmodifiedsince = date_create("2020-06-02T11:03:06+05:30")->setTimezone(new \DateTimeZone(date_default_timezone_get()));
+
+        // $headerInstance->add(GetRecordsHeader::IfModifiedSince(), $ifmodifiedsince);
+
+        $moduleAPIName = "Accounts";
 
         //Call getRecord method that takes paramInstance, moduleAPIName as parameter
         $response = $recordOperations->getRecords($moduleAPIName, $paramInstance, $headerInstance);
         // var_export($response);
-        echo "begin";
+        // echo "begin";
 
         if ($response != null) {
             //Get the status code from response
@@ -72,6 +582,7 @@ class ZohoService
                     // $recordClass = 'com\zoho\crm\api\record\Quote';
 
                     foreach ($records as $record) {
+
                         //Get the ID of each Record
                         echo ("Record ID: " . $record->getId() . "\n");
 
@@ -136,15 +647,18 @@ class ZohoService
                         //To get particular field value
                         echo ("Record Field Value: " . $record->getKeyValue("Last_Name") . "\n"); // FieldApiName
 
-                        echo ("Record KeyValues : \n");
+                        echo ("Record KeyValues: \n");
                         //Get the KeyValue map
                         foreach ($record->getKeyValues() as $keyName => $value) {
-                            echo ("Field APIName" . $keyName . " \tValue : ");
+                            echo "\$record->addFieldValue(new Field(" . var_export($keyName, true) . "), " . var_export($value, true) . ");\n";
+                            // echo ("Field APIName: " . $keyName . " \tValue: ");
 
-                            print_r($value);
+                            // print_r($value);
 
-                            echo ("\n");
+                            // echo ("\n");
                         }
+
+                        die();
                     }
                 }
             }

@@ -2,6 +2,7 @@
 
 namespace App\Models\Presswise;
 
+use App\Services\ZohoService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -20,12 +21,19 @@ class ListQuote extends Model
 
     const STATUS_NEW = 'new';
 
-    // Set David as the default CSR if one can't be found
-    const DEFAULT_CSR = ['id' => '1438057000000083001'];
+    // Set Service Team as the default CSR if one can't be found
+    const DEFAULT_CSR = ['id' => '1438057000000087178'];
 
     public function scopeCreatedSince($query, $ts)
     {
         return $query->where('status', self::STATUS_NEW)->where(self::CREATED_AT, '>', $ts);
+    }
+
+    // Presswise has quote "revisions" by recording a new record with a revision id with the same quoteID
+    // This scope pulls in the first revision on record
+    public function scopeFirstRevision($query)
+    {
+        return $query->where('revision', 1);
     }
 
     public function quoteItems()
@@ -36,6 +44,11 @@ class ListQuote extends Model
     public function listCustomer()
     {
         return $this->hasOne(ListCustomer::class, "customerID", "customerID");
+    }
+
+    public function csrListSubscriber()
+    {
+        return $this->hasOne(ListSubscriber::class, "userID", "csrmanID");
     }
 
     public function toZoho()
@@ -84,7 +97,7 @@ class ListQuote extends Model
 
             $items[] = [
                 'product' => [
-                    'Product_Code' => $quote_item->productID,
+                    'Product_Code' => $quote_item->category, // was productID
                     // 'Currency' => 'USD',
                     'name' => $quote_item->productDescription,
                     'id' => '1438057000052518001', // "custom" product id
@@ -175,7 +188,17 @@ class ListQuote extends Model
         //     array(),
         // )));
 
-        $record->addFieldValue(new Field('Customer_Service_Rep'), self::DEFAULT_CSR);
+        // do the dance to correlate the CSR email to the Zoho User ID
+        $zohoCsrField = null;
+
+        if ($zohoCsr = ZohoService::findUserByEmail($this->csrListSubscriber->emailAddress)) {
+            $zohoCsrField = ['id' => $zohoCsr->getId()];
+        } else {
+            // not found; use the default "service" CSR
+            $zohoCsrField = self::DEFAULT_CSR;
+        }
+
+        $record->addFieldValue(new Field('Customer_Service_Rep'), $zohoCsrField);
         // $record->addFieldValue(new Field('Shipping_Street'), NULL);
         // $record->addFieldValue(new Field('Description'), NULL);
         // $record->addFieldValue(new Field('Discount'), 0);
@@ -205,7 +228,9 @@ class ListQuote extends Model
         // ));
         // $record->addFieldValue(new Field('Team'), NULL);
         $record->addFieldValue(new Field('Quote_Stage'), 'Draft');
-        $record->addFieldValue(new Field('Follow_Up_Date'), $this->followUpDate);
+        if ($this->followUpDate !== '0000-00-00') {
+            $record->addFieldValue(new Field('Follow_Up_Date'), $this->followUpDate);
+        }
         // $record->addFieldValue(new Field('Modified_Time'), \DateTime::__set_state(array(
         //     'date' => '2021-04-04 16:02:02.000000',
         //     'timezone_type' => 3,
