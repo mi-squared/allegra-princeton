@@ -120,56 +120,6 @@ class ListQuote extends Model
         }
         $record->addFieldValue(new Field('Product_Details'), $items);
 
-        // array(
-        //     0 =>
-        //     array(
-        //         'product' =>
-        //         array(
-        //             'Product_Code' => NULL,
-        //             'Currency' => 'USD',
-        //             'name' => 'Test2',
-        //             'id' => '1438057000029929060',
-        //         ),
-        //         'quantity' => 100,
-        //         'Discount' => 0,
-        //         'total_after_discount' => 2500,
-        //         'net_total' => 2500,
-        //         'book' => NULL,
-        //         'Tax' => 0,
-        //         'list_price' => 25,
-        //         'unit_price' => NULL,
-        //         'quantity_in_stock' => -10,
-        //         'total' => 2500,
-        //         'id' => '1438057000029929071',
-        //         'product_description' => NULL,
-        //         'line_tax' =>
-        //         array(),
-        //     ),
-        //     1 =>
-        //     array(
-        //         'product' =>
-        //         array(
-        //             'Product_Code' => NULL,
-        //             'Currency' => 'USD',
-        //             'name' => 'Admissions Event Magnets Spring 2020',
-        //             'id' => '1438057000029934270',
-        //         ),
-        //         'quantity' => 1,
-        //         'Discount' => 0,
-        //         'total_after_discount' => 0,
-        //         'net_total' => 0,
-        //         'book' => NULL,
-        //         'Tax' => 0,
-        //         'list_price' => 0,
-        //         'unit_price' => NULL,
-        //         'quantity_in_stock' => -1,
-        //         'total' => 0,
-        //         'id' => '1438057000047794003',
-        //         'product_description' => NULL,
-        //         'line_tax' =>
-        //         array(),
-        //     ),
-        // ));
         // $record->addFieldValue(new Field('Shipping_City'), NULL);
         // $record->addFieldValue(new Field('Shipping_Country'), NULL);
         // $record->addFieldValue(new Field('PW_Select_Subtotal'), NULL);
@@ -222,6 +172,8 @@ class ListQuote extends Model
         $record->addFieldValue(new Field('Private_Quote_Notes'), $this->quotePrivateNotes);
         // $record->addFieldValue(new Field('$review'), NULL);
         // $record->addFieldValue(new Field('Valid_Till'), NULL);
+        $account = ZohoService::findAccountByPWCustomerID($this->customerID);
+        $record->addFieldValue(new Field('Account_Name'), ['id' => $account->getId()]);
         // $record->addFieldValue(new Field('Account_Name'), array(
         //     'name' => 'Kovacsco',
         //     'id' => '1438057000001601031',
