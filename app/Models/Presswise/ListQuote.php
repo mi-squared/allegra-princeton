@@ -127,6 +127,7 @@ class ListQuote extends Model
         // $record->addFieldValue(new Field('Billing_City'), NULL);
         // $record->addFieldValue(new Field('Quote_Number'), '1438057000029929078');
         $record->addFieldValue(new Field('PressWise_Ref_OrderID'), "https://myag1.mypresswise.com/s/cost.php?quoteID={$this->quoteID}.1");
+        $record->addFieldValue(new Field('PW_QuoteNo'), $this->quoteID);
         // $record->addFieldValue(new Field('Created_By'), \com\zoho\crm\api\users\User::__set_state(array(
         //     'keyValues' =>
         //     array(
