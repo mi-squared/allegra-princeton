@@ -92,7 +92,7 @@ class ListQuote extends Model
         $record->addFieldValue(new Field('Customer_PO'), $this->customerPO);
         $grand_total = 0;
         $items = [];
-        foreach ($this->quoteItems as $quote_item) {
+        foreach ($this->quoteItems()->where('quoteItemRevision', $this->revision)->get() as $quote_item) {
             $grand_total += $quote_item->quoteQuantity->grandTotal;
 
             $items[] = [
