@@ -6,6 +6,8 @@ use App\Services\ZohoService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+use Carbon\Carbon;
+
 // use \com\zoho\crm\api\record\Quotes;
 use \com\zoho\crm\api\record\Field;
 
@@ -27,6 +29,11 @@ class ListQuote extends Model
     public function scopeCreatedSince($query, $ts)
     {
         return $query->where('status', self::STATUS_NEW)->where(self::CREATED_AT, '>', $ts);
+    }
+
+    public function scopeDelayed($query)
+    {
+        return $query->where(self::CREATED_AT, '<=', Carbon::now()->subtract(15, 'minute'));
     }
 
     // Presswise has quote "revisions" by recording a new record with a revision id with the same quoteID

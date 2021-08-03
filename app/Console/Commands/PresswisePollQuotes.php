@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 
 use Illuminate\Console\Command;
 use App\Models\Presswise\ListQuote;
@@ -54,25 +55,50 @@ class PresswisePollQuotes extends Command
 
         $quoteID = $this->argument('quoteID');
 
+        $last_run_data = $this->getLastRunData();
+
+        $this->line("Last run: " . $last_run_data->maxCreated);
+
         // test quote id = 132181.1
 
         if ($quoteID) {
             $new_quotes = ListQuote::where('quoteID', $quoteID)->firstRevision()->get();
         } else {
-            // TODO use highest $quote->created_at from the last run
-            // $new_quotes = ListQuote::createdSince(Carbon::now()->subtract(1, 'day'))->get();
-            $new_quotes = [];
+            $new_quotes = ListQuote::createdSince(new Carbon($last_run_data->maxCreated))->delayed()->get();
         }
+
 
         $this->line(count($new_quotes) . " to process\n");
         foreach ($new_quotes as $quote) {
             ZohoImportQuote::dispatch($quote);
             if (!$quoteID) {
-                // TODO record max created_at
+                // updated max created, if needed
+                if ($quote->created > $last_run_data->maxCreated) {
+                    $last_run_data->maxCreated = $quote->created;
+                }
             }
         }
 
+        $this->saveLastRunData($last_run_data);
 
         return 0;
+    }
+
+    protected function getLastRunData()
+    {
+        // look for the json file
+        if (Storage::disk('local')->exists('presswise.json')) {
+            return json_decode(Storage::disk('local')->get('presswise.json'));
+        } else {
+            // not found; make new data
+            return [
+                'maxCreated' => Carbon::now()->subtract(1, 'day')
+            ];
+        }
+    }
+
+    protected function saveLastRunData($data)
+    {
+        return Storage::disk('local')->put('presswise.json', json_encode($data));
     }
 }
