@@ -199,7 +199,7 @@ class ListQuote extends Model
         // $record->addFieldValue(new Field('Terms_and_Conditions'), NULL);
         $record->addFieldValue(new Field('Grand_Total'), $grand_total);
         $record->addFieldValue(new Field('Sub_Total'), $grand_total);
-        $record->addFieldValue(new Field('Subject'), "[TEST] " . $this->quoteName);
+        $record->addFieldValue(new Field('Subject'), $this->quoteName);
         // $record->addFieldValue(new Field('$orchestration'), false);
         $record->addFieldValue(new Field('Contact_Name'), NULL);
         $record->addFieldValue(new Field('Production_Notes'), $this->productionNote);
