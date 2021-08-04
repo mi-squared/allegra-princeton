@@ -57,14 +57,13 @@ class PresswisePollQuotes extends Command
 
         $last_run_data = $this->getLastRunData();
 
-        $this->line("Last run: " . $last_run_data->maxCreated);
-
+        $this->line("Last run: " . $last_run_data['maxCreated']);
         // test quote id = 132181.1
 
         if ($quoteID) {
             $new_quotes = ListQuote::where('quoteID', $quoteID)->firstRevision()->get();
         } else {
-            $new_quotes = ListQuote::createdSince(new Carbon($last_run_data->maxCreated))->delayed()->get();
+            $new_quotes = ListQuote::createdSince($last_run_data['maxCreated'])->delayed()->get();
         }
 
 
@@ -73,8 +72,8 @@ class PresswisePollQuotes extends Command
             ZohoImportQuote::dispatch($quote);
             if (!$quoteID) {
                 // updated max created, if needed
-                if ($quote->created > $last_run_data->maxCreated) {
-                    $last_run_data->maxCreated = $quote->created;
+                if ($quote->created > $last_run_data['maxCreated']) {
+                    $last_run_data['maxCreated'] = $quote->created;
                 }
             }
         }
@@ -87,8 +86,8 @@ class PresswisePollQuotes extends Command
     protected function getLastRunData()
     {
         // look for the json file
-        if (Storage::disk('local')->exists('presswise.json')) {
-            return json_decode(Storage::disk('local')->get('presswise.json'));
+        if (Storage::disk('local')->exists('presswise.data')) {
+            return unserialize(Storage::disk('local')->get('presswise.data'));
         } else {
             // not found; make new data
             return [
@@ -99,6 +98,6 @@ class PresswisePollQuotes extends Command
 
     protected function saveLastRunData($data)
     {
-        return Storage::disk('local')->put('presswise.json', json_encode($data));
+        return Storage::disk('local')->put('presswise.data', serialize($data));
     }
 }
