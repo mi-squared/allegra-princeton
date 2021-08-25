@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Console\Command;
 use App\Models\Presswise\ListQuote;
 use App\Services\ZohoService;
-use App\Jobs\ZohoImportQuote;
+use App\Jobs\ZohoUpdateQuote;
 
 use Carbon\Carbon;
 
@@ -57,14 +57,14 @@ class PresswisePollQuotes extends Command
 
         $last_run_data = $this->getLastRunData();
 
-        $this->line("Last run: " . $last_run_data['maxCreated']);
+        $this->line("Last run: " . $last_run_data['maxUpdated']);
         // test quote id = 132181.1
 
         if ($quoteID) {
             $new_quotes = ListQuote::where('quoteID', $quoteID)->firstRevision()->get();
         } else {
             // grab all quotes updated since the last run
-            $new_quotes = ListQuote::updatedSince($last_run_data['maxCreated'])->where('status', '<>', 'new')->firstRevision()->get();
+            $new_quotes = ListQuote::updatedSince($last_run_data['maxUpdated'])->where('status', '<>', 'new')->firstRevision()->get();
         }
 
 
@@ -81,9 +81,9 @@ class PresswisePollQuotes extends Command
             }
 
             if (!$quoteID) {
-                // updated max created, if needed
-                if ($quote->created > $last_run_data['maxCreated']) {
-                    $last_run_data['maxCreated'] = $quote->created;
+                // updated max updated, if needed
+                if ($quote->updated > $last_run_data['maxUpdated']) {
+                    $last_run_data['maxUpdated'] = $quote->updated;
                 }
             }
         }
@@ -95,14 +95,17 @@ class PresswisePollQuotes extends Command
 
     protected function getLastRunData()
     {
+        // TODO abstract this into a common class to share with
+        // the other tasks
+        $defaults = [
+            'maxUpdated' => Carbon::now()->subtract(1, 'day')
+        ];
         // look for the json file
         if (Storage::disk('local')->exists('presswise.data')) {
-            return unserialize(Storage::disk('local')->get('presswise.data'));
+            return $defaults + unserialize(Storage::disk('local')->get('presswise.data'));
         } else {
             // not found; make new data
-            return [
-                'maxCreated' => Carbon::now()->subtract(1, 'day')
-            ];
+            return $defaults;
         }
     }
 
