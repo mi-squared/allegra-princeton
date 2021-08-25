@@ -17,8 +17,11 @@ use com\zoho\crm\api\users\UsersOperations;
 use com\zoho\crm\api\users\GetUsersHeader;
 use com\zoho\crm\api\users\GetUserHeader;
 use com\zoho\crm\api\users\GetUsersParam;
+use com\zoho\crm\api\record\ActionWrapper;
+use com\zoho\crm\api\record\SuccessResponse;
 
 use Illuminate\Support\Facades\Cache;
+use RuntimeException;
 
 class ZohoRecordNotFoundException extends \Exception
 {
@@ -26,6 +29,52 @@ class ZohoRecordNotFoundException extends \Exception
 
 class ZohoService
 {
+    /**
+     * Handle Zoho Response
+     * Zoho has a weird anti-pattern response format. This method does its best to make sense of it.
+     */
+    protected static function handleResponse($response, $statusCodes = [200])
+    {
+        if ($response != null) {
+            if (!in_array($response->getStatusCode(), $statusCodes)) {
+                if ($response->getStatusCode() === 204) {
+                    throw new ZohoRecordNotFoundException("Zoho record not found");
+                } else {
+                    throw new \RuntimeException("Zoho API call failed with status code: {$response->getStatusCode()}");
+                }
+            }
+
+            if ($response->isExpected()) {
+                $actionHandler = $response->getObject();
+
+                if ($actionHandler instanceof ActionWrapper) {
+                    //Get the received ResponseWrapper instance
+                    $actionWrapper = $actionHandler;
+
+                    //Get the list of obtained ActionResponse instances
+                    $actionResponses = $actionWrapper->getData();
+
+                    foreach ($actionResponses as $actionResponse) {
+                        //Check if the request is successful
+                        if ($actionResponse instanceof SuccessResponse) {
+                            return $actionResponse;
+                        }
+                        //Check if the request returned an exception
+                        else if ($actionResponse instanceof APIException) {
+                            throw $actionResponse;
+                        }
+                    }
+                }
+                //Check if the request returned an exception
+                else if ($actionHandler instanceof APIException) {
+                    throw $actionHandler;
+                }
+            } else {
+                throw new RuntimeException('Unexpected response from Zoho API');
+            }
+        }
+    }
+
     public static function saveQuote(\com\zoho\crm\api\record\Record $record)
     {
         return self::saveRecord("Quotes", $record);
@@ -50,6 +99,34 @@ class ZohoService
         return $recordOperations->createRecords($module, $bodyWrapper);
     }
 
+    /**
+     * <h3> Update Record</h3>
+     * This method is used to update a single record of a module with ID and print the response.
+     * @param moduleAPIName - The API Name of the record's module.
+     * @param recordId - The ID of the record to be obtained.
+     * @throws Exception
+     */
+    public static function updateRecord(string $moduleAPIName, \com\zoho\crm\api\record\Record $record)
+    {
+        //Get instance of RecordOperations Class
+        $recordOperations = new RecordOperations();
+
+        //Get instance of BodyWrapper Class that will contain the request body
+        $request = new BodyWrapper();
+
+        //Set the list to Records in BodyWrapper instance
+        $request->setData([$record]);
+
+        // $trigger = array("approval", "workflow", "blueprint");
+
+        // $request->setTrigger($trigger);
+
+        //Call updateRecord method that takes BodyWrapper instance, ModuleAPIName and recordId as parameter.
+        $response = $recordOperations->updateRecord($record->getId(), $moduleAPIName, $request);
+
+        return self::handleResponse($response);
+    }
+
     public static function findRecords($moduleAPIName, ParameterMap $paramInstance, HeaderMap $headerInstance)
     {
         $recordOperations = new RecordOperations();
@@ -64,6 +141,48 @@ class ZohoService
 
         //Call getRecord method that takes paramInstance, moduleAPIName as parameter
         return $recordOperations->getRecords($moduleAPIName, $paramInstance, $headerInstance);
+    }
+
+    public static function findQuoteByPW_QuoteNo($pwQuoteNo)
+    {
+        $moduleAPIName = "Quotes";
+
+        //Get instance of RecordOperations Class that takes moduleAPIName as parameter
+        $recordOperations = new RecordOperations();
+        $paramInstance = new ParameterMap();
+        $paramInstance->add(SearchRecordsParam::criteria(), "((PW_QuoteNo:equals:{$pwQuoteNo}))");
+
+        $response = $recordOperations->searchRecords($moduleAPIName, $paramInstance);
+
+        if ($response != null) {
+            if ($response->getStatusCode() === 204) {
+                throw new ZohoRecordNotFoundException("Presswise quote {$pwQuoteNo} not found in Zoho");
+            }
+
+            if ($response->getStatusCode() != 200) {
+                throw new \RuntimeException("Zoho Search Accounts failed with status code: {$response->getStatusCode()}");
+            }
+
+            if ($response->isExpected()) {
+                //Get the object from response
+                $responseHandler = $response->getObject();
+
+                if ($responseHandler instanceof ResponseWrapper) {
+                    $responseWrapper = $responseHandler;
+
+                    //Get the obtained Record instance
+                    $records = $responseWrapper->getData();
+
+                    foreach ($records as $record) {
+                        return $record;
+                    }
+                }
+                //Check if the request returned an exception
+                else throw $responseHandler;
+            } else {
+                throw new \RuntimeException("Zoho Search Account response not expected");
+            }
+        }
     }
 
     public static function findAccountByPWCustomerID($customerId)

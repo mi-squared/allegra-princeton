@@ -20,14 +20,14 @@ class PresswisePollQuotes extends Command
      *
      * @var string
      */
-    protected $signature = 'presswise:poll-quotes {quoteID?}';
+    protected $signature = 'presswise:poll-quotes {quoteID?} {--noqueue}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Polls for new quotes from the list_quote table and inserts them into the job queue for processing.';
+    protected $description = 'Polls for quotes that changed from "new" since the last run from the list_quote table and updates the Zoho status.';
 
     /**
      * Create a new command instance.
@@ -63,13 +63,23 @@ class PresswisePollQuotes extends Command
         if ($quoteID) {
             $new_quotes = ListQuote::where('quoteID', $quoteID)->firstRevision()->get();
         } else {
-            $new_quotes = ListQuote::createdSince($last_run_data['maxCreated'])->delayed()->get();
+            // grab all quotes updated since the last run
+            $new_quotes = ListQuote::updatedSince($last_run_data['maxCreated'])->where('status', '<>', 'new')->firstRevision()->get();
         }
 
 
         $this->line(count($new_quotes) . " to process\n");
         foreach ($new_quotes as $quote) {
-            ZohoImportQuote::dispatch($quote);
+            if ($this->option("noqueue")) {
+                // try to find the existing record
+                $record = ZohoService::findQuoteByPW_QuoteNo($quote->quoteID);
+
+                $quote->updateZohoRecord($record);
+                ZohoService::updateRecord("Quotes", $record);
+            } else {
+                ZohoUpdateQuote::dispatch($quote);
+            }
+
             if (!$quoteID) {
                 // updated max created, if needed
                 if ($quote->created > $last_run_data['maxCreated']) {

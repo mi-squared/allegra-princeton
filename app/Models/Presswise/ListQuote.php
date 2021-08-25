@@ -23,12 +23,31 @@ class ListQuote extends Model
 
     const STATUS_NEW = 'new';
 
+    const STATUS_MAP =
+    [
+        'won' => 'Closed Won',
+        'lost' => 'Closed Lost',
+        'canceled' => 'On Hold', // ??
+        'new' => 'Draft',
+        'open' => 'Negotiation',
+    ];
+
     // Set Service Team as the default CSR if one can't be found
     const DEFAULT_CSR = ['id' => '1438057000000087178'];
 
     public function scopeCreatedSince($query, $ts)
     {
-        return $query->where('status', self::STATUS_NEW)->where(self::CREATED_AT, '>', $ts);
+        return $query->where(self::CREATED_AT, '>', $ts);
+    }
+
+    public function scopeUpdatedSince($query, $ts)
+    {
+        return $query->where(self::UPDATED_AT, '>', $ts);
+    }
+
+    public function scopeStatus($query, $status)
+    {
+        return $query->where('status', $status);
     }
 
     public function scopeDelayed($query)
@@ -56,6 +75,16 @@ class ListQuote extends Model
     public function csrListSubscriber()
     {
         return $this->hasOne(ListSubscriber::class, "userID", "csrmanID");
+    }
+
+    protected function mapStatusToQuoteStage($status)
+    {
+        return self::STATUS_MAP[$status] ?? 'Draft';
+    }
+
+    public function updateZohoRecord(\com\zoho\crm\api\record\Record &$record)
+    {
+        $record->addFieldValue(new Field('Quote_Stage'), $this->mapStatusToQuoteStage($this->status));
     }
 
     public function toZoho()
@@ -157,6 +186,8 @@ class ListQuote extends Model
         }
 
         $record->addFieldValue(new Field('Customer_Service_Rep'), $zohoCsrField);
+        // $record->setCreatedBy($zohoCsr);
+        $record->addFieldValue(new Field('Owner'), $zohoCsrField);
         // $record->addFieldValue(new Field('Shipping_Street'), NULL);
         // $record->addFieldValue(new Field('Description'), NULL);
         // $record->addFieldValue(new Field('Discount'), 0);
@@ -187,7 +218,7 @@ class ListQuote extends Model
         //     'id' => '1438057000001601031',
         // ));
         // $record->addFieldValue(new Field('Team'), NULL);
-        $record->addFieldValue(new Field('Quote_Stage'), 'Draft');
+        $record->addFieldValue(new Field('Quote_Stage'), $this->mapStatusToQuoteStage($this->status));
         if ($this->followUpDate !== '0000-00-00') {
             $record->addFieldValue(new Field('Follow_Up_Date'), $this->followUpDate);
         }
