@@ -36,8 +36,14 @@ class ZohoImportQuote implements ShouldQueue //, ShouldBeUnique
      */
     public function handle()
     {
-        $record = $this->quote->toZoho();
-        ZohoService::saveQuote($record);
+        try {
+            $record = ZohoService::findQuoteByPW_QuoteNo($this->quote->quoteID);
+            // record found; ignore the import request
+        } catch (\App\Services\ZohoRecordNotFoundException) {
+            // not found! record a new record
+            $record = $this->quote->toZoho();
+            ZohoService::saveQuote($record);
+        }
     }
 
     /**
