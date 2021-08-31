@@ -34,6 +34,7 @@ class ListQuote extends Model
 
     // Set Service Team as the default CSR if one can't be found
     const DEFAULT_CSR = ['id' => '1438057000000087178'];
+    const DEFAULT_CSR_EMAIL = 'service@allegraprinceton.com';
 
     public function scopeCreatedSince($query, $ts)
     {
@@ -177,12 +178,17 @@ class ListQuote extends Model
 
         // do the dance to correlate the CSR email to the Zoho User ID
         $zohoCsrField = null;
+        $zohoCsr = null;
 
-        if ($zohoCsr = ZohoService::findUserByEmail($this->csrListSubscriber->emailAddress)) {
+        if (
+            $this->csrListSubscriber
+            && $zohoCsr = ZohoService::findUserByEmail($this->csrListSubscriber->emailAddress)
+        ) {
             $zohoCsrField = ['id' => $zohoCsr->getId()];
         } else {
             // not found; use the default "service" CSR
-            $zohoCsrField = self::DEFAULT_CSR;
+            $zohoCsr = ZohoService::findUserByEmail(self::DEFAULT_CSR_EMAIL);
+            $zohoCsrField = ['id' => $zohoCsr->getId()];
         }
 
         $record->addFieldValue(new Field('Customer_Service_Rep'), $zohoCsrField);
