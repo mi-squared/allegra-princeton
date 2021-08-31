@@ -187,7 +187,9 @@ class ListQuote extends Model
 
         $record->addFieldValue(new Field('Customer_Service_Rep'), $zohoCsrField);
         // $record->setCreatedBy($zohoCsr);
-        $record->addFieldValue(new Field('Owner'), $zohoCsrField);
+        if ($zohoCsr) {
+            $record->addFieldValue(new Field('Owner'), $zohoCsr);
+        }
         // $record->addFieldValue(new Field('Shipping_Street'), NULL);
         // $record->addFieldValue(new Field('Description'), NULL);
         // $record->addFieldValue(new Field('Discount'), 0);

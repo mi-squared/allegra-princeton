@@ -98,7 +98,7 @@ class PresswiseImportNewQuotes extends Command
         ];
         // look for the json file
         if (Storage::disk('local')->exists('presswise.data')) {
-            return $defaults + unserialize(Storage::disk('local')->get('presswise.data'));
+            return unserialize(Storage::disk('local')->get('presswise.data')) + $defaults;
         } else {
             // not found; make new data
             return $defaults;

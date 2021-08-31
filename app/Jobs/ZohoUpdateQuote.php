@@ -36,12 +36,17 @@ class ZohoUpdateQuote implements ShouldQueue //, ShouldBeUnique
      */
     public function handle()
     {
-        $record = ZohoService::findQuoteByPW_QuoteNo($this->quote->quoteID);
-        if ($record) {
-            $this->quote->updateZohoRecord($record);
-            ZohoService::updateRecord("Quotes", $record);
+        try {
+            $record = ZohoService::findQuoteByPW_QuoteNo($this->quote->quoteID);
+            if ($record) {
+                $this->quote->updateZohoRecord($record);
+                ZohoService::updateRecord("Quotes", $record);
+            }
+        } catch (\App\Services\ZohoRecordNotFoundException) {
+            // else - record a new record?
+            $record = $this->quote->toZoho();
+            ZohoService::saveQuote($record);
         }
-        // else - record a new record?
     }
 
     /**

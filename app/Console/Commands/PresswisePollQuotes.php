@@ -82,8 +82,8 @@ class PresswisePollQuotes extends Command
 
             if (!$quoteID) {
                 // updated max updated, if needed
-                if ($quote->updated > $last_run_data['maxUpdated']) {
-                    $last_run_data['maxUpdated'] = $quote->updated;
+                if ($quote->modified > $last_run_data['maxUpdated']) {
+                    $last_run_data['maxUpdated'] = $quote->modified;
                 }
             }
         }
@@ -102,7 +102,7 @@ class PresswisePollQuotes extends Command
         ];
         // look for the json file
         if (Storage::disk('local')->exists('presswise.data')) {
-            return $defaults + unserialize(Storage::disk('local')->get('presswise.data'));
+            return unserialize(Storage::disk('local')->get('presswise.data')) + $defaults;
         } else {
             // not found; make new data
             return $defaults;
