@@ -61,6 +61,11 @@ class QueueOrder extends Model
         return $this->hasMany(QueueJob::class, "orderID", "orderID");
     }
 
+    public function scopeCreatedSince($query, $ts)
+    {
+        return $query->where(self::CREATED_AT, '>', $ts);
+    }
+
     public function toZoho()
     {
         $record = new \com\zoho\crm\api\record\Record;
@@ -83,7 +88,9 @@ class QueueOrder extends Model
         // $record->addFieldValue(new Field('Invoice_Number'), $this->orderID);
         $record->addFieldValue(new Field('PW_Order_ID'), $this->orderID);
 
-        $record->addFieldValue(new Field('Due_Date'), $this->dueDate->toDate());
+        if ($this->dueDate) {
+            $record->addFieldValue(new Field('Due_Date'), $this->dueDate->toDate());
+        }
         // $record->addFieldValue(new Field('Contact_Name'), $this->userID); // TODO
         $record->addFieldValue(new Field('Invoice_Date'), $this->salesDate);
 
@@ -100,14 +107,13 @@ class QueueOrder extends Model
         // $record->addFieldValue(new Field(''), $this->groupID);
         $record->addFieldValue(new Field('Sub_Total'), $this->subTotal);
         // $record->addFieldValue(new Field(''), $this->shipCost);
-        
-        // TODO add rush cost
+
+        // TODO add rush cost to adjustment
         $record->addFieldValue(new Field('Tax'), $this->taxCost);
 
         $grand_total = 0;
         $items = [];
-        // TODO TODO TODO
-        // make this work
+
         foreach ($this->queueJobs()->get() as $line_item) {
             $grand_total += $line_item->price;
 
@@ -125,7 +131,7 @@ class QueueOrder extends Model
             $row->setProductDescription($line_item->productDesc);
 
             $items[] = $row;
-                        //     'total' => $line_item->price,
+            //     'total' => $line_item->price,
             //     'product_description' => $line_item->productDesc,
 
 

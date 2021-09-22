@@ -159,6 +159,51 @@ class ZohoService
         return $recordOperations->getRecords($moduleAPIName, $paramInstance, $headerInstance);
     }
 
+    // PW_Order_ID
+    public static function findInvoiceByPW_Order_ID($orderID)
+    {
+        $moduleAPIName = "Invoices";
+
+        //Get instance of RecordOperations Class that takes moduleAPIName as parameter
+        $recordOperations = new RecordOperations();
+        $paramInstance = new ParameterMap();
+        $paramInstance->add(SearchRecordsParam::criteria(), "((PW_Order_ID:equals:{$orderID}))");
+
+        $response = $recordOperations->searchRecords($moduleAPIName, $paramInstance);
+
+        if (
+            $response != null
+        ) {
+            if ($response->getStatusCode() === 204) {
+                throw new ZohoRecordNotFoundException("Presswise invoice {$orderID} not found in Zoho");
+            }
+
+            if ($response->getStatusCode() != 200) {
+                throw new \RuntimeException("Zoho Search Invoices failed with status code: {$response->getStatusCode()}");
+            }
+
+            if ($response->isExpected()) {
+                //Get the object from response
+                $responseHandler = $response->getObject();
+
+                if ($responseHandler instanceof ResponseWrapper) {
+                    $responseWrapper = $responseHandler;
+
+                    //Get the obtained Record instance
+                    $records = $responseWrapper->getData();
+
+                    foreach ($records as $record) {
+                        return $record;
+                    }
+                }
+                //Check if the request returned an exception
+                else throw $responseHandler;
+            } else {
+                throw new \RuntimeException("Zoho Search Account response not expected");
+            }
+        }
+    }
+
     public static function findQuoteByPW_QuoteNo($pwQuoteNo)
     {
         $moduleAPIName = "Quotes";
