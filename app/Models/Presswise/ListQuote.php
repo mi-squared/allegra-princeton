@@ -27,9 +27,9 @@ class ListQuote extends Model
     [
         'won' => 'Closed Won',
         'lost' => 'Closed Lost',
-        'canceled' => 'On Hold', // ??
+        'canceled' => 'Cancelled',
         'new' => 'Draft',
-        'open' => 'Negotiation',
+        'open' => 'Delivered',
     ];
 
     // Set Service Team as the default CSR if one can't be found
