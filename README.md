@@ -4,7 +4,7 @@
 -   Copy the client id and secret into the .env file as ZOHO_CLIENT_ID and ZOHO_CLIENT_SECRET
 -   Copy the username into the .env file as ZOHO_USER
 -   The above client is a "self" client as documented at https://www.zoho.com/crm/developer/docs/api/v2/auth-request.html#self-client
--   Create a code with the scope "ZohoCRM.settings.ALL,ZohoCRM.modules.quotes.ALL,ZohoCRM.modules.accounts.ALL,ZohoCRM.users.ALL" and whatever description you want
+-   Create a code with the scope "ZohoCRM.settings.ALL,ZohoCRM.modules.quotes.ALL,ZohoCRM.modules.accounts.ALL,ZohoCRM.users.ALL,ZohoCRM.modules.invoices.ALL" and whatever description you want
 -   The code given has to be converted into a refresh token as documented at https://www.zoho.com/crm/developer/docs/api/v2/access-refresh.html
 -   Use the code to POST to the token endpoint (https://accounts.zoho.com/oauth/v2/token)
 -   Save the refresh token into the .env file as ZOHO_REFRESH_TOKEN (the access token can be ignored as it'll expire in an hour)
