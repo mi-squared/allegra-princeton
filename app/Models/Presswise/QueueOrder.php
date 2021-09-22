@@ -66,6 +66,16 @@ class QueueOrder extends Model
         return $query->where(self::CREATED_AT, '>', $ts);
     }
 
+    public function scopeUpdatedSince($query, $ts)
+    {
+        return $query->where(self::UPDATED_AT, '>', $ts);
+    }
+
+    public function updateZohoRecord(\com\zoho\crm\api\record\Record &$record)
+    {
+        $record->addFieldValue(new Field('Status'), new Choice($this->status));
+    }
+
     public function toZoho()
     {
         $record = new \com\zoho\crm\api\record\Record;
@@ -78,7 +88,7 @@ class QueueOrder extends Model
         // $record->addFieldValue(new Field(''), $this->webID);
 
         $record->addFieldValue(new Field('Purchase_Order'), $this->customerPO);
-        $record->addFieldValue(new Field('Subject'), "[TEST]" . $this->quoteName);
+        $record->addFieldValue(new Field('Subject'), $this->quoteName);
         // $record->addFieldValue(new Field(''), $this->btTerms);
         // $record->addFieldValue(new Field('Owner'), $this->salesmanID);
         // $record->addFieldValue(new Field(''), $this->csrmanid);
