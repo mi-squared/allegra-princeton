@@ -62,7 +62,7 @@ class PresswiseImportNewInvoices extends Command
         $this->line("Last run: " . $last_run_data['maxCreated']);
 
         if ($orderID) {
-            $invoices = QueueOrder::where('orderID', $orderID)->firstRevision()->get();
+            $invoices = QueueOrder::where('orderID', $orderID)->get();
         } else {
             // grab all "new" invoices created since
             $invoices = QueueOrder::createdSince($last_run_data['maxCreated'])->where('status', 'new')->where('subTotal', '>', 0)->get();

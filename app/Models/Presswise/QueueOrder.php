@@ -20,10 +20,13 @@ class QueueOrder extends Model
     const CREATED_AT = 'createDate';
     const UPDATED_AT = 'lastModified';
 
+    const DEFAULT_SALESMAN_EMAIL = 'service@allegraprinceton.com';
+
     protected $casts = [
         'dueDate' => 'datetime',
         'subTotal' => 'double',
         'taxCost' => 'double',
+        'salesDate' => 'datetime',
     ];
 
     const STATUS_MAP =
@@ -61,6 +64,11 @@ class QueueOrder extends Model
         return $this->hasMany(QueueJob::class, "orderID", "orderID");
     }
 
+    public function csrListSubscriber()
+    {
+        return $this->hasOne(ListSubscriber::class, "userID", "salesmanID");
+    }
+
     public function scopeCreatedSince($query, $ts)
     {
         return $query->where(self::CREATED_AT, '>', $ts);
@@ -74,6 +82,9 @@ class QueueOrder extends Model
     public function updateZohoRecord(\com\zoho\crm\api\record\Record &$record)
     {
         $record->addFieldValue(new Field('Status'), new Choice($this->status));
+        if ($this->quoteName) {
+            $record->addFieldValue(new Field('Subject'), $this->quoteName);
+        }
     }
 
     public function toZoho()
@@ -88,9 +99,27 @@ class QueueOrder extends Model
         // $record->addFieldValue(new Field(''), $this->webID);
 
         $record->addFieldValue(new Field('Purchase_Order'), $this->customerPO);
-        $record->addFieldValue(new Field('Subject'), $this->quoteName);
+        if ($this->quoteName) {
+            $record->addFieldValue(new Field('Subject'), $this->quoteName);
+        } else {
+            $record->addFieldValue(new Field('Subject'), "[NO SUBJECT]");
+        }
         // $record->addFieldValue(new Field(''), $this->btTerms);
-        // $record->addFieldValue(new Field('Owner'), $this->salesmanID);
+        $zohoCsrField = null;
+        $zohoCsr = null;
+
+        if (
+            $this->csrListSubscriber
+            && $zohoCsr = ZohoService::findUserByEmail($this->csrListSubscriber->emailAddress)
+        ) {
+            $zohoCsrField = ['id' => $zohoCsr->getId()];
+        } else {
+            // not found; use the default "service" CSR
+            $zohoCsr = ZohoService::findUserByEmail(self::DEFAULT_SALESMAN_EMAIL);
+            $zohoCsrField = ['id' => $zohoCsr->getId()];
+        }
+        $zohoCsr->setId($zohoCsr->getId());
+        $record->addFieldValue(new Field('Owner'), $zohoCsr);
         // $record->addFieldValue(new Field(''), $this->csrmanid);
         // $record->addFieldValue(new Field(''), $this->prepressid);
         // $record->addFieldValue(new Field(''), $this->designerID);
@@ -102,7 +131,9 @@ class QueueOrder extends Model
             $record->addFieldValue(new Field('Due_Date'), $this->dueDate->toDate());
         }
         // $record->addFieldValue(new Field('Contact_Name'), $this->userID); // TODO
-        $record->addFieldValue(new Field('Invoice_Date'), $this->salesDate);
+        if ($this->salesDate) {
+            $record->addFieldValue(new Field('Invoice_Date'), $this->salesDate->toDate());
+        }
 
         $account = ZohoService::findAccountByPWCustomerID($this->customerID);
         // mark the account name and id as modified so it'll get sent during the request
