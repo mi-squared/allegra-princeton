@@ -166,8 +166,8 @@ class QueueOrder extends Model
 
             $row->setProduct($product);
             $row->setQuantity($line_item->quantity);
-            $row->setListPrice($line_item->price / $line_item->quantity);
-            $row->setUnitPrice($line_item->price / $line_item->quantity);
+            $row->setListPrice(round($line_item->price / $line_item->quantity, 2));
+            $row->setUnitPrice(round($line_item->price / $line_item->quantity, 2));
             $row->setTotal($line_item->price);
             $row->setProductDescription($line_item->productDesc);
 
@@ -200,7 +200,7 @@ class QueueOrder extends Model
             // ];
         }
         $record->addFieldValue(new Field('Product_Details'), $items);
-        $record->addFieldValue(new Field('PW_Subtotal'), $grand_total);
+        $record->addFieldValue(new Field('PW_Subtotal'), round($grand_total, 2));
         /*
         'Product_Details' =>
     array (

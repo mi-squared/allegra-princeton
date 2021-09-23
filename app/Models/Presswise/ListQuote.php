@@ -146,8 +146,8 @@ class ListQuote extends Model
                 // 'book' => NULL,
                 'Tax' => 0,
                 // Presswise doesn't give list/unit values so we have to calculate
-                'list_price' => $quote_item->quoteQuantity->grandTotal / $quote_item->quoteQuantity->quantity,
-                'unit_price' => $quote_item->quoteQuantity->grandTotal / $quote_item->quoteQuantity->quantity,
+                'list_price' => round($quote_item->quoteQuantity->grandTotal / $quote_item->quoteQuantity->quantity, 2),
+                'unit_price' => round($quote_item->quoteQuantity->grandTotal / $quote_item->quoteQuantity->quantity, 2),
                 // 'quantity_in_stock' => -10,
                 'total' => $quote_item->quoteQuantity->grandTotal,
                 // 'id' => '1438057000029929071',
