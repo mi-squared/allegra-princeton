@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
 
 // use \com\zoho\crm\api\record\Quotes;
+use \com\zoho\crm\api\util\Choice;
 use \com\zoho\crm\api\record\Field;
 
 class ListQuote extends Model
@@ -85,7 +86,7 @@ class ListQuote extends Model
 
     public function updateZohoRecord(\com\zoho\crm\api\record\Record &$record)
     {
-        $record->addFieldValue(new Field('Quote_Stage'), $this->mapStatusToQuoteStage($this->status));
+        $record->addFieldValue(new Field('Quote_Stage'), new Choice($this->mapStatusToQuoteStage($this->status)));
     }
 
     public function toZoho()
@@ -106,7 +107,7 @@ class ListQuote extends Model
         // $record->addFieldValue(new Field('URL_1'), NULL);
         // $record->addFieldValue(new Field('Exchange_Rate'), 1);
         $record->addFieldValue(new Field('Confidence'), $this->confidence);
-        $record->addFieldValue(new Field('Currency'), 'USD');
+        $record->addFieldValue(new Field('Currency'), new Choice('USD'));
         // $record->addFieldValue(new Field('Billing_Country'), NULL);
         // $record->addFieldValue(new Field('id'), '1438057000029929072');
         // $record->addFieldValue(new Field('Carrier'), 'FedEX');
@@ -226,7 +227,7 @@ class ListQuote extends Model
         //     'id' => '1438057000001601031',
         // ));
         // $record->addFieldValue(new Field('Team'), NULL);
-        $record->addFieldValue(new Field('Quote_Stage'), $this->mapStatusToQuoteStage($this->status));
+        $record->addFieldValue(new Field('Quote_Stage'), new Choice($this->mapStatusToQuoteStage($this->status)));
         if ($this->followUpDate !== '0000-00-00') {
             $record->addFieldValue(new Field('Follow_Up_Date'), $this->followUpDate);
         }
