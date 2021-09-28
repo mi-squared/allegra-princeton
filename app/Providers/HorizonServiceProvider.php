@@ -16,9 +16,14 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
     public function boot()
     {
         parent::boot();
+        Horizon::auth(function ($request) {
+            // WARNING
+            // Allow any user to see the horizon dashboard as auth is handled by nginx
+            return true;
+        });
 
         // Horizon::routeSmsNotificationsTo('15556667777');
-        // Horizon::routeMailNotificationsTo('example@example.com');
+        Horizon::routeMailNotificationsTo('service@allegraprinceton.com');
         // Horizon::routeSlackNotificationsTo('slack-webhook-url', '#channel');
 
         // Horizon::night();
