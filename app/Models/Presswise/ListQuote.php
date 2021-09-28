@@ -108,7 +108,7 @@ class ListQuote extends Model
         // $record->addFieldValue(new Field('Deal_Name'), NULL);
         // $record->addFieldValue(new Field('URL_1'), NULL);
         // $record->addFieldValue(new Field('Exchange_Rate'), 1);
-        $record->addFieldValue(new Field('Confidence'), $this->confidence);
+        $record->addFieldValue(new Field('Confidence'), (double)$this->confidence);
         $record->addFieldValue(new Field('Currency'), new Choice('USD'));
         // $record->addFieldValue(new Field('Billing_Country'), NULL);
         // $record->addFieldValue(new Field('id'), '1438057000029929072');
