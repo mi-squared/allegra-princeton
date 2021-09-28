@@ -30,7 +30,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('presswise:poll-invoices')->everyFifteenMinutes();
 
         $schedule->command('presswise:import-new-invoices')->dailyAt('06:00');
-        $schedule->command('presswise:import-new-quotes')->everyFifteenMinutes('06:00');
+        $schedule->command('presswise:import-new-quotes')->dailyAt('06:00');
     }
 
     /**
