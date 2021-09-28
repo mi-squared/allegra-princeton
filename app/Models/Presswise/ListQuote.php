@@ -21,6 +21,10 @@ class ListQuote extends Model
     protected $connection = 'presswise_price';
     protected $table = 'list_quote';
 
+    protected $casts = [
+        'followUpDate' => 'datetime',
+    ];
+
     const CREATED_AT = 'created';
     const UPDATED_AT = 'modified';
 
@@ -246,7 +250,7 @@ class ListQuote extends Model
         // $record->addFieldValue(new Field('Team'), NULL);
         $record->addFieldValue(new Field('Quote_Stage'), new Choice($this->mapStatusToQuoteStage($this->status)));
         if ($this->followUpDate !== '0000-00-00') {
-            $record->addFieldValue(new Field('Follow_Up_Date'), $this->followUpDate);
+            $record->addFieldValue(new Field('Follow_Up_Date'), $this->followUpDate->toDate());
         }
         // $record->addFieldValue(new Field('Modified_Time'), \DateTime::__set_state(array(
         //     'date' => '2021-04-04 16:02:02.000000',
