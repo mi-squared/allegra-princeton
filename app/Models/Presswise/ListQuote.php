@@ -243,7 +243,7 @@ class ListQuote extends Model
         //     'keyModified' =>
         //     array(),
         // )));
-        $record->addFieldValue(new Field('Private_Quote_Notes'), $this->quotePrivateNotes);
+        $record->addFieldValue(new Field('Private_Quote_Notes'), substr($this->quotePrivateNotes, 0, 2000));
         // $record->addFieldValue(new Field('$review'), NULL);
         // $record->addFieldValue(new Field('Valid_Till'), NULL);
         $account = ZohoService::findAccountByPWCustomerID($this->customerID);
