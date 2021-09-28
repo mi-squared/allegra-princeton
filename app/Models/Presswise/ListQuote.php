@@ -93,6 +93,11 @@ class ListQuote extends Model
     public function updateZohoRecord(\com\zoho\crm\api\record\Record &$record)
     {
         $record->addFieldValue(new Field('Quote_Stage'), new Choice($this->mapStatusToQuoteStage($this->status)));
+        if($this->quoteName) {
+            $record->addFieldValue(new Field('Subject'), $this->quoteName);
+        } else {
+            $record->addFieldValue(new Field('Subject'), "[NO SUBJECT]");
+        }
     }
 
     public function toZoho()
@@ -249,7 +254,7 @@ class ListQuote extends Model
         // ));
         // $record->addFieldValue(new Field('Team'), NULL);
         $record->addFieldValue(new Field('Quote_Stage'), new Choice($this->mapStatusToQuoteStage($this->status)));
-        if ($this->followUpDate !== '0000-00-00') {
+        if ($this->followUpDate > Carbon::create(0,0,0)) {
             $record->addFieldValue(new Field('Follow_Up_Date'), $this->followUpDate->toDate());
         }
         // $record->addFieldValue(new Field('Modified_Time'), \DateTime::__set_state(array(
@@ -260,7 +265,11 @@ class ListQuote extends Model
         // $record->addFieldValue(new Field('Terms_and_Conditions'), NULL);
         $record->addFieldValue(new Field('Grand_Total'), $grand_total);
         $record->addFieldValue(new Field('Sub_Total'), $grand_total);
-        $record->addFieldValue(new Field('Subject'), $this->quoteName);
+        if($this->quoteName) {
+            $record->addFieldValue(new Field('Subject'), $this->quoteName);
+        } else {
+            $record->addFieldValue(new Field('Subject'), "[NO SUBJECT]");
+        }
         // $record->addFieldValue(new Field('$orchestration'), false);
         $record->addFieldValue(new Field('Contact_Name'), NULL);
         $record->addFieldValue(new Field('Production_Notes'), $this->productionNote);
