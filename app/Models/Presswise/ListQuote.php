@@ -11,6 +11,8 @@ use Carbon\Carbon;
 // use \com\zoho\crm\api\record\Quotes;
 use \com\zoho\crm\api\util\Choice;
 use \com\zoho\crm\api\record\Field;
+use \com\zoho\crm\api\record\InventoryLineItems;
+use \com\zoho\crm\api\record\LineItemProduct;
 
 class ListQuote extends Model
 {
@@ -133,28 +135,43 @@ class ListQuote extends Model
         foreach ($this->quoteItems()->where('quoteItemRevision', $this->revision)->get() as $quote_item) {
             $grand_total += $quote_item->quoteQuantity->grandTotal;
 
-            $items[] = [
-                'product' => [
-                    'Product_Code' => $quote_item->category, // was productID
-                    // 'Currency' => 'USD',
-                    'name' => $quote_item->productDescription,
-                    'id' => '1438057000052518001', // "custom" product id
-                ],
-                'quantity' => (float)$quote_item->quoteQuantity->quantity,
-                'Discount' => 0,
-                // 'total_after_discount' => $quote_item->quoteQuantity->grandTotal,
-                // 'net_total' => $quote_item->quoteQuantity->grandTotal,
-                // 'book' => NULL,
-                'Tax' => 0,
-                // Presswise doesn't give list/unit values so we have to calculate
-                'list_price' => round($quote_item->quoteQuantity->grandTotal / $quote_item->quoteQuantity->quantity, 2),
-                'unit_price' => round($quote_item->quoteQuantity->grandTotal / $quote_item->quoteQuantity->quantity, 2),
-                // 'quantity_in_stock' => -10,
-                'total' => $quote_item->quoteQuantity->grandTotal,
-                // 'id' => '1438057000029929071',
-                'product_description' => $quote_item->productDescription,
-                'line_tax' => [],
-            ];
+            $row = new InventoryLineItems();
+            $product = new LineItemProduct();
+            $product->setProductCode($quote_item->category);
+            $product->setName($quote_item->productDescription);
+            $product->setId('1438057000052518001');
+
+            $row->setProduct($product);
+            $row->setQuantity($quote_item->quoteQuantity->quantity);
+            $row->setListPrice(round($quote_item->quoteQuantity->grandTotal / $quote_item->quoteQuantity->quantity, 2));
+            $row->setUnitPrice(round($quote_item->quoteQuantity->grandTotal / $quote_item->quoteQuantity->quantity, 2));
+            $row->setTotal($quote_item->quoteQuantity->grandTotal);
+            $row->setProductDescription($quote_item->productDescription);
+
+            $items[] = $row;
+
+            // $items[] = [
+            //     'product' => [
+            //         'Product_Code' => $quote_item->category, // was productID
+            //         // 'Currency' => 'USD',
+            //         'name' => $quote_item->productDescription,
+            //         'id' => '1438057000052518001', // "custom" product id
+            //     ],
+            //     'quantity' => (float)$quote_item->quoteQuantity->quantity,
+            //     'Discount' => 0,
+            //     // 'total_after_discount' => $quote_item->quoteQuantity->grandTotal,
+            //     // 'net_total' => $quote_item->quoteQuantity->grandTotal,
+            //     // 'book' => NULL,
+            //     'Tax' => 0,
+            //     // Presswise doesn't give list/unit values so we have to calculate
+            //     'list_price' => round($quote_item->quoteQuantity->grandTotal / $quote_item->quoteQuantity->quantity, 2),
+            //     'unit_price' => round($quote_item->quoteQuantity->grandTotal / $quote_item->quoteQuantity->quantity, 2),
+            //     // 'quantity_in_stock' => -10,
+            //     'total' => $quote_item->quoteQuantity->grandTotal,
+            //     // 'id' => '1438057000029929071',
+            //     'product_description' => $quote_item->productDescription,
+            //     'line_tax' => [],
+            // ];
         }
         $record->addFieldValue(new Field('Product_Details'), $items);
 
@@ -191,8 +208,8 @@ class ListQuote extends Model
             $zohoCsr = ZohoService::findUserByEmail(self::DEFAULT_CSR_EMAIL);
             $zohoCsrField = ['id' => $zohoCsr->getId()];
         }
-
-        $record->addFieldValue(new Field('Customer_Service_Rep'), $zohoCsrField);
+        $zohoCsr->setId($zohoCsr->getId());
+        $record->addFieldValue(new Field('Customer_Service_Rep'), $zohoCsr);
         // $record->setCreatedBy($zohoCsr);
         if ($zohoCsr) {
             $record->addFieldValue(new Field('Owner'), $zohoCsr);
@@ -221,7 +238,7 @@ class ListQuote extends Model
         // $record->addFieldValue(new Field('$review'), NULL);
         // $record->addFieldValue(new Field('Valid_Till'), NULL);
         $account = ZohoService::findAccountByPWCustomerID($this->customerID);
-        $record->addFieldValue(new Field('Account_Name'), ['id' => $account->getId()]);
+        $record->addFieldValue(new Field('Account_Name'), $account);
         // $record->addFieldValue(new Field('Account_Name'), array(
         //     'name' => 'Kovacsco',
         //     'id' => '1438057000001601031',
